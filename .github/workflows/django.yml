@@ -22,4 +22,4 @@ jobs:
           cache-dependency-glob: |
             **/pyproject.toml
       - name: Test with python ${{ matrix.python-version }}
-        run: uv run --frozen pytest
+        run: uv run  pytest
