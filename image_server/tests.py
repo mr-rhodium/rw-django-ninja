@@ -3,6 +3,7 @@ from ninja.testing import TestClient
 
 from image_server.api import router
 
+
 class ImagesTestCase(TestCase):
     def setUp(self):
         self.client = TestClient(router)

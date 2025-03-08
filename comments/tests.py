@@ -13,10 +13,13 @@ from comments.models import Comment
 
 User = get_user_model()
 
+
 class CommentViewTestCase(TestCase):
     def setUp(self):
         for i in range(2):
-            user = User.objects.create_user(username=f"testuser{i}", password="pass", email=f"test{i}@email.email")
+            user = User.objects.create_user(
+                username=f"testuser{i}", password="pass", email=f"test{i}@email.email"
+            )
             setattr(self, f"user_{i}", user)
             setattr(
                 self,
@@ -36,10 +39,16 @@ class CommentViewTestCase(TestCase):
             [2, self.article_1, self.user_0],
             [3, self.article_1, self.user_1],
         ]:
-            comment = Comment.objects.create(article=article, author=author, content=f"comment {i} content")
+            comment = Comment.objects.create(
+                article=article, author=author, content=f"comment {i} content"
+            )
             setattr(self, f"comment_{i}", comment)
         self.client = TestClient(
-            router, headers={"Authorization": f"Token {access_token}", "Content-Type": "application/json"}
+            router,
+            headers={
+                "Authorization": f"Token {access_token}",
+                "Content-Type": "application/json",
+            },
         )
 
     def _valid_timestamps_in_output_dict(self, output_dict):
@@ -78,7 +87,10 @@ class CommentViewTestCase(TestCase):
                             "following": make_it_follow and u == 1,
                         },
                     }
-                    for comment, n, u in [[self.comment_1, 1, 0], [self.comment_0, 0, 1]]
+                    for comment, n, u in [
+                        [self.comment_1, 1, 0],
+                        [self.comment_0, 0, 1],
+                    ]
                 ],
             },
         )
@@ -109,7 +121,9 @@ class CommentViewTestCase(TestCase):
             },
         )
         self.assertEqual(self.article_1.comment_set.count(), 3)
-        self.assertEqual(self.article_1.comment_set.last().content, "This is a test comment")
+        self.assertEqual(
+            self.article_1.comment_set.last().content, "This is a test comment"
+        )
         self.assertEqual(self.article_1.comment_set.last().author, self.user_0)
         self._valid_timestamps_in_output_dict(response.data["comment"])
 
@@ -123,25 +137,32 @@ class CommentViewTestCase(TestCase):
         self.assertEqual(self.article_1.comment_set.count(), 2)
 
     def test_delete_comment_on_my_article_from_other_user(self):
-        response = self.client.delete(f"/articles/{self.article_0.slug}/comments/{self.comment_0.id}")
+        response = self.client.delete(
+            f"/articles/{self.article_0.slug}/comments/{self.comment_0.id}"
+        )
         self.assertEquals(response.status_code, 204)
         self.assertEqual(self.article_0.comment_set.count(), 1)
         self.assertEqual(self.article_0.comment_set.first(), self.comment_1)
 
-
     def test_delete_comment_on_other_article_but_is_mine(self):
-        response = self.client.delete(f"/articles/{self.article_1.slug}/comments/{self.comment_2.id}")
+        response = self.client.delete(
+            f"/articles/{self.article_1.slug}/comments/{self.comment_2.id}"
+        )
         self.assertEqual(response.status_code, 204)
         self.assertEqual(self.article_1.comment_set.count(), 1)
         self.assertEqual(self.article_1.comment_set.first(), self.comment_3)
 
     def test_cant_delete_comment_on_other_article_as_it_is_not_mine(self):
-        response = self.client.delete(f"/articles/{self.article_1.slug}/comments/{self.comment_3.id}")
+        response = self.client.delete(
+            f"/articles/{self.article_1.slug}/comments/{self.comment_3.id}"
+        )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.article_1.comment_set.count(), 2)
 
     def test_cant_delete_comment_not_logged(self):
         self.client.headers["Authorization"] = None
-        response = self.client.delete(f"/articles/{self.article_0.slug}/comments/{self.comment_1.id}")
+        response = self.client.delete(
+            f"/articles/{self.article_0.slug}/comments/{self.comment_1.id}"
+        )
         self.assertEqual(response.status_code, 401)
         self.assertEqual(self.article_1.comment_set.count(), 2)

@@ -154,3 +154,27 @@ NINJA_JWT = {
 }
 # Default user image
 DEFAULT_USER_IMAGE = "https://api.realworld.io/images/smiley-cyrus.jpeg"
+
+
+def monkeypatch_ninja_uuid_converter() -> None:
+    import importlib
+    import sys
+
+    import django.urls
+    from typing import Any
+
+    module_name = "ninja.signature.utils"
+    sys.modules.pop(module_name, None)
+
+    original_register_converter = django.urls.register_converter
+
+    def fake_register_converter(*_: Any, **__: Any) -> None:
+        pass
+
+    django.urls.register_converter = fake_register_converter
+    importlib.import_module(module_name)
+
+    django.urls.register_converter = original_register_converter
+
+
+monkeypatch_ninja_uuid_converter()

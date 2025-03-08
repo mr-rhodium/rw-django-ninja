@@ -17,8 +17,13 @@ User = get_user_model()
 class AccountRegistrationTestCase(TestCase):
     def setUp(self):
         self.url = "users"
-        self.base_url = {"email": "test@test.com", "password": "testpassword", "username": "testuser"}
+        self.base_url = {
+            "email": "test@test.com",
+            "password": "testpassword",
+            "username": "testuser",
+        }
         self.client = TestClient(router, headers={"Content-Type": "application/json"})
+
     def test_account_registration(self):
         response = self.client.post(self.url, json={"user": self.base_user})
         self.assertEquals(response.status_code, 201)
@@ -34,7 +39,9 @@ class AccountRegistrationTestCase(TestCase):
                 },
             },
         )
-        self.assertEqual(sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2)
+        self.assertEqual(
+            sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2
+        )
         self.assertEquals(User.objects.count(), 1)
         self.assertEquals(
             User.objects.values().last(),
@@ -53,38 +60,44 @@ class AccountRegistrationTestCase(TestCase):
             },
         )
         self.assrtIn("pbkdf2_sha256", User.objects.last().password)
+
     def test_account_registration_username_already_exists(self):
         response = self.client.post(self.url, json={"user": self.base_user})
         self.assertEquals(response.status_code, 201)
         with transaction.atomic():
-            response = self.client.post(self.url, json={"user": {**self.base_user, "username": "gg"}})
+            response = self.client.post(
+                self.url, json={"user": {**self.base_user, "username": "gg"}}
+            )
             self.assertEquals(User.objects.count(), 1)
             self.assertEquals(response.status_code, 409)
             self.assertEquals(loads(response.content), {"already_existing": "email"})
-
 
     def test_account_registration_invalid_data_wrong_email(self):
         response = self.client.post(self.url, json={"user": self.base_user})
         self.assertEquals(response.status_code, 201)
         with transaction.atomic():
-            response = self.client.post(self.url, json={"user": {**self.base_user, "email": "gg@example.com"}})
+            response = self.client.post(
+                self.url, json={"user": {**self.base_user, "email": "gg@example.com"}}
+            )
         self.assertEquals(User.objects.count(), 1)
         self.assertEquals(response.status_code, 409)
         self.assertEqual(loads(response.content), {"already_existing": "username"})
 
     def test_account_registration_invalid_data_missing_keys(self):
-        response =self.client.post(self.url, son={**self.base_user, "email": "no-at"})
+        response = self.client.post(self.url, son={**self.base_user, "email": "no-at"})
         self.assertEquals(response.status_code, 422)
         self.assertEquals(User.objects.count(), 0)
 
     def test_account_registration_invalid_data_missing_root_key(self):
-        response = self.client.post(self.url,  json={"user": {}})
+        response = self.client.post(self.url, json={"user": {}})
         self.assertEquals(response.status_code, 422)
         self.assertEquals(User.objects.count(), 0)
 
     def test_account_registration_invalid_data_empty_fields(self):
         for replaced in ["email", "password", "username"]:
-            response = self.client.post(self.url, json={"user": {**self.base_user, replaced: ""}})
+            response = self.client.post(
+                self.url, json={"user": {**self.base_user, replaced: ""}}
+            )
             self.assertEqual(response.status_code, 422)
             self.assertEqual(User.objects.count(), 0)
             if replaced in ["password", "username"]:
@@ -105,8 +118,14 @@ class AccountRegistrationTestCase(TestCase):
 
 class AccountLoginTestCase(TestCase):
     def setUp(self):
-        self.email, self.username, self.password = "test@example.com", "testuser", "testpassword"
-        self.user = User.objects.create_user(email=self.email, username=self.username, password=self.password)
+        self.email, self.username, self.password = (
+            "test@example.com",
+            "testuser",
+            "testpassword",
+        )
+        self.user = User.objects.create_user(
+            email=self.email, username=self.username, password=self.password
+        )
         self.url = "users/login"
         self.client = TestClient(router, headers={"Content-Type": "application/json"})
 
@@ -124,37 +143,66 @@ class AccountLoginTestCase(TestCase):
                     "token": mock.ANY,
                 },
             },
-
         )
-        self.assertEqual(sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2)
+        self.assertEqual(
+            sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2
+        )
+
     def test_account_login_bad_password(self):
         user_data = {"user": {"email": self.email, "password": "fail"}}
-        response  = self.client(self.url, json=user_data)
+        response = self.client(self.url, json=user_data)
         self.assertEquals(response.status_code, 401)
-        self.assertEqual(loads(response.content), {"detail": [{"msg": "incorrect credentials"}]})
+        self.assertEqual(
+            loads(response.content), {"detail": [{"msg": "incorrect credentials"}]}
+        )
+
     def test_account_login_no_password(self):
         user_data = {"user": {"email": self.email}}
         response = self.client.post(self.url, json=user_data)
         self.assertEquals(response.status_code, 422)
-        missing_password = {"type": "missing", "loc": ["body", "data", "user", "password"], "msg": "Field required"}
+        missing_password = {
+            "type": "missing",
+            "loc": ["body", "data", "user", "password"],
+            "msg": "Field required",
+        }
         self.assertEqual(loads(response.content), {"detail": [missing_password]})
+
     def test_account_login_invalid_data(self):
-        invalid_user_data =  {"user": {}}
+        invalid_user_data = {"user": {}}
         response = self.client.post(self.url, json=invalid_user_data)
         self.assertEquals(response.status_code, 422)
-        missing_email = {"type": "missing", "loc": ["body", "data", "user", "email"], "msg": "Field required"}
-        missing_password = {"type": "missing", "loc": ["body", "data", "user", "password"], "msg": "Field required"}
-        self.assertEqual(loads(response.content), {"detail": [missing_email, missing_password]})
-
+        missing_email = {
+            "type": "missing",
+            "loc": ["body", "data", "user", "email"],
+            "msg": "Field required",
+        }
+        missing_password = {
+            "type": "missing",
+            "loc": ["body", "data", "user", "password"],
+            "msg": "Field required",
+        }
+        self.assertEqual(
+            loads(response.content), {"detail": [missing_email, missing_password]}
+        )
 
 
 class UserViewTestCase(TestCase):
     def setUp(self):
-        self.email, self.username, self.password = "test@example.com", "testuser", "testpassword"
-        self.user = User.objects.create_user(email=self.email, username=self.username, password=self.password)
+        self.email, self.username, self.password = (
+            "test@example.com",
+            "testuser",
+            "testpassword",
+        )
+        self.user = User.objects.create_user(
+            email=self.email, username=self.username, password=self.password
+        )
         self.access_token = str(AccessToken.for_user(self.user))
         self.client = TestClient(
-            router, headers={"Authorization": f"Token {self.access_token}", "Content-Type": "application/json"}
+            router,
+            headers={
+                "Authorization": f"Token {self.access_token}",
+                "Content-Type": "application/json",
+            },
         )
         self.url = "user"
         self.base_update = {
@@ -163,33 +211,71 @@ class UserViewTestCase(TestCase):
             "image": "http://example.com/updated-image.jpg",
             "username": "UpdatedUsername",
         }
-        self.default_user_statuses = {"is_active": True, "is_staff": False, "is_superuser": False}
+        self.default_user_statuses = {
+            "is_active": True,
+            "is_staff": False,
+            "is_superuser": False,
+        }
+
     def test_user_view_get(self):
         response = self.client.get(self.url)
         self.assertEquals(response.status_code, 200)
         self.assertEquals(
             loads(response.content),
-            {"user": {"username": self.username, "email": self.email, "bio": "", "image": None}},
+            {
+                "user": {
+                    "username": self.username,
+                    "email": self.email,
+                    "bio": "",
+                    "image": None,
+                }
+            },
         )
+
     def test_user_view_get_not_logged(self):
         self.client.headers = {"Content-Type": "application/json"}
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 401)
         self.assertEqual(loads(response.content), {"detail": "Unauthorized"})
 
-    @parameterized.expand([([bool((i >> j) % 2) for j in range(3, -1, -1)],) for i in range(0b10000)])
+    @parameterized.expand(
+        [([bool((i >> j) % 2) for j in range(3, -1, -1)],) for i in range(0b10000)]
+    )
     def test_user_view_put(self, bools):
-        filtered_update = {k: v for i, (k, v) in enumerate(self.base_update.items()) if bools[i]}
+        filtered_update = {
+            k: v for i, (k, v) in enumerate(self.base_update.items()) if bools[i]
+        }
         response = self.client.put(self.url, json={"user": filtered_update})
-        saved_user_value = {"email": "test@example.com", "username": "testuser", "bio": "", "image": None}
-        base_values = {"id": self.user.id, "last_login": None, "date_joined": mock.ANY, "password": mock.ANY}
+        saved_user_value = {
+            "email": "test@example.com",
+            "username": "testuser",
+            "bio": "",
+            "image": None,
+        }
+        base_values = {
+            "id": self.user.id,
+            "last_login": None,
+            "date_joined": mock.ANY,
+            "password": mock.ANY,
+        }
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(loads(response.content), {"user": {**saved_user_value, **filtered_update, "token": mock.ANY}})
-        self.assertEqual(sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2)
+        self.assertEqual(
+            loads(response.content),
+            {"user": {**saved_user_value, **filtered_update, "token": mock.ANY}},
+        )
+        self.assertEqual(
+            sum(1 for c in loads(response.content)["user"]["token"] if c == "."), 2
+        )
         self.assertEqual(
             User.objects.values().last(),
-            {**base_values, **self.default_user_statuses, **saved_user_value, **filtered_update},
+            {
+                **base_values,
+                **self.default_user_statuses,
+                **saved_user_value,
+                **filtered_update,
+            },
         )
+
     def test_user_view_put_password(self):
         response = self.client.put(self.url, json={})
         self.assertEquals(response.status_code, 422)
@@ -197,12 +283,19 @@ class UserViewTestCase(TestCase):
             loads(response.content),
             {
                 "detail": [
-                    {"loc": ["body", "data", "user"], "msg": "Field required", "type": "missing"},
+                    {
+                        "loc": ["body", "data", "user"],
+                        "msg": "Field required",
+                        "type": "missing",
+                    },
                 ],
             },
         )
+
     def test_user_view_put_invalid_data_additional_key(self):
-        response = self.client.put(self.url, json={"user": {**self.base_update}, "useer": []})
+        response = self.client.put(
+            self.url, json={"user": {**self.base_update}, "useer": []}
+        )
         self.assertEquals(response.status_code, 200)
 
     def test_user_view_put_invalid_data_not_a_dict(self):
@@ -213,22 +306,39 @@ class UserViewTestCase(TestCase):
             loads(response.content),
             {
                 "detail": [
-                    {"loc": ["body", "data", "user"], "msg": "Field required", "type": "missing"},
+                    {
+                        "loc": ["body", "data", "user"],
+                        "msg": "Field required",
+                        "type": "missing",
+                    },
                 ],
             },
         )
+
     def test_user_view_put_invalid_data_user_is_not_a_dict(self):
-        response = self.client.put(self.url,  json={"user": ["aaa"]})
+        response = self.client.put(self.url, json={"user": ["aaa"]})
         self.assertEquals(response.status_code, 200)
-        saved_user_value = {"email": "test@example.com", "username": "testuser", "bio": "", "image": None}
-        base_values = {"id": self.user.id, "last_login": None, "date_joined": mock.ANY, "password": mock.ANY}
+        saved_user_value = {
+            "email": "test@example.com",
+            "username": "testuser",
+            "bio": "",
+            "image": None,
+        }
+        base_values = {
+            "id": self.user.id,
+            "last_login": None,
+            "date_joined": mock.ANY,
+            "password": mock.ANY,
+        }
         self.assertEqual(
             User.objects.values().last(),
             {**base_values, **self.default_user_statuses, **saved_user_value},
         )
 
     def test_user_view_put_invalid_data_wrong_mail_domain(self):
-        response = self.client.put(self.url, json={"user": {**self.base_update, "email": "updated@exalom"}})
+        response = self.client.put(
+            self.url, json={"user": {**self.base_update, "email": "updated@exalom"}}
+        )
         self.assertEquals(response.status_code, 422)
         self.assertEqual(
             loads(response.content),
@@ -241,14 +351,18 @@ class UserViewTestCase(TestCase):
                             "value is not a valid email address: The part after the @-sign is not valid. "
                             "It should have a period."
                         ),
-                        "ctx": {"reason": "The part after the @-sign is not valid. It should have a period."},
+                        "ctx": {
+                            "reason": "The part after the @-sign is not valid. It should have a period."
+                        },
                     },
                 ],
             },
         )
 
     def test_user_view_put_invalid_data_wrong_mail(self):
-        response = self.client.put(self.url, json={"user": {**self.base_update, "email": "updatexalom"}})
+        response = self.client.put(
+            self.url, json={"user": {**self.base_update, "email": "updatexalom"}}
+        )
         self.assertEquals(response.status_code, 422)
         self.assertEqual(
             loads(response.content),
@@ -261,7 +375,9 @@ class UserViewTestCase(TestCase):
                             "value is not a valid email address: The email address is not valid. "
                             "It must have exactly one @-sign."
                         ),
-                        "ctx": {"reason": "The email address is not valid. It must have exactly one @-sign."},
+                        "ctx": {
+                            "reason": "The email address is not valid. It must have exactly one @-sign."
+                        },
                     },
                 ],
             },
@@ -276,15 +392,28 @@ class UserViewTestCase(TestCase):
 
 class ProfileDetailViewTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(email="test@example.com", username="testuser", password="testpassword")
-        self.other_user = User.objects.create_user(email="test2@gmail.com", username="test2user", password="password")
+        self.user = User.objects.create_user(
+            email="test@example.com", username="testuser", password="testpassword"
+        )
+        self.other_user = User.objects.create_user(
+            email="test2@gmail.com", username="test2user", password="password"
+        )
         self.access_token = str(AccessToken.for_user(self.user))
         self.client = TestClient(
-            router, headers={"Authorization": f"Token {self.access_token}", "Content-Type": "application/json"}
+            router,
+            headers={
+                "Authorization": f"Token {self.access_token}",
+                "Content-Type": "application/json",
+            },
         )
         self.url = f"/profiles/{self.user.username}"
         self.other_url = f"/profiles/{self.other_user.username}"
-        self.dict = {"username": "testuser", "bio": None, "image": settings.DEFAULT_USER_IMAGE, "following": False}
+        self.dict = {
+            "username": "testuser",
+            "bio": None,
+            "image": settings.DEFAULT_USER_IMAGE,
+            "following": False,
+        }
         self.other_dict = {**self.dict, "username": "test2user"}
 
     def test_profile_detail_view_get_self(self):
@@ -307,12 +436,16 @@ class ProfileDetailViewTestCase(TestCase):
         self.other_user.followers.add(self.user)
         response = self.client.get(self.other_url)
         self.assertEquals(response.status_code, 200)
-        self.assertEqual(loads(response.content), {"profile": {**self.other_dict, "following": True}})
+        self.assertEqual(
+            loads(response.content), {"profile": {**self.other_dict, "following": True}}
+        )
 
     def test_profile_detail_view_follow(self):
         response = self.client.post(f"{self.other_url}/follow")
         self.assertEquals(response.status_code, 200)
-        self.assertEqual(loads(response.content), {"profile": {**self.other_dict, "following": True}})
+        self.assertEqual(
+            loads(response.content), {"profile": {**self.other_dict, "following": True}}
+        )
         self.assertEqual(self.other_user.followers.count(), 1)
         self.assertEqual(self.other_user.followers.last().id, self.user.id)
 

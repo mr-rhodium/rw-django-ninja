@@ -1,4 +1,4 @@
-from base64 import  b64decode
+from base64 import b64decode
 from typing import Any
 
 from django.http import HttpRequest, HttpResponse
