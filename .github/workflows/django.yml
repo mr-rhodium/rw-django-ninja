@@ -8,30 +8,15 @@ on:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
-    # strategy:
-    #   max-parallel: 4
-    #   matrix:
-    #     python-version: [3.12]
-
+    strategy:
+      matrix:
+        python-version: [ "3.11", "3.12"]
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 
-      id: setup-python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-    - name: Install the latest version of uv
-    - uses: astral-sh/setup-uv@v5
-      with:
-        version: "latest"
-    #--------- Install required-version ---------
-    - name:  Install required-version defined in uv.toml
-      uses: astral-sh/setup-uv@v5
-      with:
-        pyproject-file: "pyproject.toml"
-
-    #---- install root project -------
-    - name: Run Test
-      run: uv run pytest
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Test with python ${{ matrix.python-version }}
+        run: uv run --frozen pytest
